@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#E0F7FA">
+    <meta name="description" content="โปรแกรมคำนวณ BMI (ดัชนีมวลกาย) - Calculate and track your BMI">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BMI Calculator">
+    <title>โปรแกรมคำนวณ BMI</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23E0F7FA' width='192' height='192'/><text x='50%' y='50%' font-size='80' font-weight='bold' text-anchor='middle' dominant-baseline='middle' fill='%230D1B2A' font-family='Arial'>BMI</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* ตั้งค่าพื้นฐาน */
+        body {
+            font-family: 'Sarabun', sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ส่วนหัว (Header) สีฟ้าอ่อน */
+        header {
+            background-color: #E0F7FA; /* สีฟ้าอ่อนตามรูป */
+            padding: 20px 40px;
+            border-bottom: 2px solid #B2EBF2;
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #000;
+        }
+
+        /* คอนเทนเนอร์หลักแบ่งซ้ายขวา */
+        .main-container {
+            display: flex;
+            flex: 1; /* ยืดเต็มความสูงที่เหลือ */
+            height: calc(100vh - 80px); /* ลบความสูง Header ออก */
+        }
+
+        /* --- ฝั่งซ้าย: ส่วนกรอกข้อมูล (Left Panel) --- */
+        .left-panel {
+            width: 35%; /* กว้างประมาณ 1 ใน 3 */
+            background-color: #90A4AE; /* สีเทาอมฟ้าเข้ม ตามรูป */
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            color: #000;
+        }
+
+        label {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        /* ช่องกรอกข้อมูล (Input) */
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border-radius: 25px; /* ขอบมน */
+            border: none;
+            font-size: 16px;
+            box-sizing: border-box; /* ไม่ให้ padding ดันขนาดเกิน */
+            outline: none;
+        }
+
+        /* กลุ่มปุ่มกด */
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        button {
+            background-color: #0D1B2A; /* สีน้ำเงินเข้มเกือบดำ */
+            color: white;
+            padding: 10px 40px;
+            border: none;
+            border-radius: 20px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 150px;
+            font-family: 'Sarabun', sans-serif;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        /* กล่องแสดงผลลัพธ์ (Result Box) */
+        .result-box {
+            background-color: white;
+            border-radius: 15px;
+            padding: 20px;
+            height: 150px; /* ความสูงตามรูป */
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        #bmiResultText {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        #bmiStatusText {
+            font-size: 20px;
+            color: #666;
+        }
+
+        /* --- ฝั่งขวา: ส่วนแสดงผล (Right Panel) --- */
+        .right-panel {
+            width: 65%; /* กว้างที่เหลือ */
+            background-color: #CFD8DC; /* สีเทาอมฟ้าอ่อน ตามรูป */
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* พื้นที่กราฟ (Chart Container) */
+        .chart-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            height: 45%; /* ครึ่งบน */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* พื้นที่ตาราง (Table Container) */
+        .table-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            height: 50%; /* ครึ่งล่าง */
+            overflow-y: auto; /* ถ้าข้อมูลเยอะให้เลื่อนได้ */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* ตาราง (Table Style) */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        
+        .delete-btn {
+            background-color: #ff5252;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            width: auto;
+        }
+
+        /* Responsive Design for Tablet */
+        @media (max-width: 1024px) {
+            .left-panel {
+                width: 40%;
+                padding: 30px;
+            }
+
+            .right-panel {
+                width: 60%;
+                padding: 20px;
+            }
+
+            .chart-container,
+            .table-container {
+                height: auto;
+                min-height: 200px;
+            }
+        }
+
+        /* Responsive Design for Mobile */
+        @media (max-width: 768px) {
+            body {
+                height: auto;
+            }
+
+            header {
+                padding: 15px 20px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            .main-container {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .left-panel,
+            .right-panel {
+                width: 100%;
+                padding: 20px;
+                min-height: auto;
+            }
+
+            .left-panel {
+                background-color: #90A4AE;
+                gap: 15px;
+            }
+
+            .button-group {
+                flex-direction: row;
+                gap: 10px;
+                justify-content: center;
+            }
+
+            button {
+                width: auto;
+                flex: 1;
+                max-width: 120px;
+                padding: 8px 20px;
+                font-size: 14px;
+            }
+
+            .result-box {
+                height: auto;
+                min-height: 120px;
+            }
+
+            #bmiResultText {
+                font-size: 28px;
+            }
+
+            #bmiStatusText {
+                font-size: 16px;
+            }
+
+            label {
+                font-size: 14px;
+            }
+
+            input[type="number"] {
+                padding: 10px;
+                font-size: 14px;
+            }
+
+            .chart-container,
+            .table-container {
+                height: auto;
+                min-height: 200px;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 8px 4px;
+            }
+
+            .delete-btn {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+        }
+
+        /* Extra small devices */
+        @media (max-width: 480px) {
+            header {
+                padding: 12px 15px;
+            }
+
+            h1 {
+                font-size: 18px;
+            }
+
+            .left-panel,
+            .right-panel {
+                padding: 15px;
+                gap: 12px;
+            }
+
+            button {
+                max-width: 100px;
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+
+            #bmiResultText {
+                font-size: 24px;
+            }
+
+            #bmiStatusText {
+                font-size: 14px;
+            }
+
+            table {
+                font-size: 11px;
+            }
+
+            th, td {
+                padding: 6px 2px;
+            }
+
+            .chart-container {
+                min-height: 180px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>โปรแกรมคำนวณ BMI (ดัชนีมวลกาย)</h1>
+    </header>
+
+    <div class="main-container">
+        
+        <div class="left-panel">
+            <div>
+                <label>น้ำหนัก (Weight)</label>
+                <input type="number" id="weightInput" placeholder="กรอกน้ำหนัก (kg)">
+            </div>
+
+            <div>
+                <label>ส่วนสูง (Height)</label>
+                <input type="number" id="heightInput" placeholder="กรอกส่วนสูง (cm)">
+            </div>
+
+            <div class="button-group">
+                <button onclick="calculateBMI()">คำนวณ</button>
+                <button onclick="clearData()">ล้างค่า</button>
+            </div>
+
+            <div>
+                <label>ผลการคำนวณ</label>
+                <div class="result-box">
+                    <span id="bmiResultText">--.-</span>
+                    <span id="bmiStatusText">รอการคำนวณ</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            
+            <div>
+                <label>กราฟแสดงผล</label>
+                <div class="chart-container">
+                    <canvas id="bmiChart"></canvas>
+                </div>
+            </div>
+
+            <div style="flex: 1; display: flex; flex-direction: column;">
+                <label>ประวัติ</label>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>วันที่</th>
+                                <th>น้ำหนัก</th>
+                                <th>ส่วนสูง</th>
+                                <th>ค่า BMI</th>
+                                <th>สถานะ</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <tr>
+                                <td colspan="6" style="color: grey;">ยังไม่มีประวัติการบันทึก</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'bmi_history_v3';
+        let chart = null;
+
+        // โหลดข้อมูลจาก LocalStorage
+        function loadHistory() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        // บันทึกข้อมูลลง LocalStorage
+        function saveHistory(data) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        // ฟังก์ชันจำแนกสถานะ BMI
+        function getBMIStatus(bmi) {
+            if (bmi < 18.5) return 'น้อยเกินไป (Underweight)';
+            if (bmi < 25) return 'ปกติ (Normal)';
+            if (bmi < 30) return 'น้ำหนักเกิน (Overweight)';
+            return 'อ้วน (Obese)';
+        }
+
+        // ฟังก์ชันคำนวณ BMI
+        function calculateBMI() {
+            const weight = parseFloat(document.getElementById('weightInput').value);
+            const height = parseFloat(document.getElementById('heightInput').value);
+
+            // ตรวจสอบการกรอกข้อมูล
+            if (!weight || !height || weight <= 0 || height <= 0) {
+                alert('กรุณากรอกน้ำหนักและส่วนสูงที่ถูกต้อง');
+                return;
+            }
+
+            // คำนวณ BMI: น้ำหนัก(kg) / ส่วนสูง(m)^2
+            const heightInMeters = height / 100;
+            const bmi = weight / (heightInMeters * heightInMeters);
+            const status = getBMIStatus(bmi);
+
+            // แสดงผลลัพธ์
+            document.getElementById('bmiResultText').innerText = bmi.toFixed(1);
+            document.getElementById('bmiStatusText').innerText = status;
+
+            // บันทึกประวัติ
+            const today = new Date().toLocaleDateString('th-TH');
+            const history = loadHistory();
+            history.push({
+                date: today,
+                weight: weight,
+                height: height,
+                bmi: bmi.toFixed(1),
+                status: status,
+                timestamp: Date.now()
+            });
+            saveHistory(history);
+
+            // อัปเดตตาราง และ กราฟ
+            renderHistory();
+            updateChart();
+        }
+
+        // ฟังก์ชันแสดงประวัติในตาราง
+        function renderHistory() {
+            const history = loadHistory();
+            const tbody = document.getElementById('historyTableBody');
+
+            if (history.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="color: grey;">ยังไม่มีประวัติการบันทึก</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            // แสดงเรียงจากล่าสุดไปเก่า
+            history.slice().reverse().forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.date}</td>
+                    <td>${item.weight}</td>
+                    <td>${item.height}</td>
+                    <td><strong>${item.bmi}</strong></td>
+                    <td>${item.status}</td>
+                    <td><button class="delete-btn" onclick="deleteRecord(${history.length - 1 - index})">ลบ</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ฟังก์ชันลบบันทึก
+        function deleteRecord(index) {
+            const history = loadHistory();
+            const reverseIndex = history.length - 1 - index;
+            if (confirm(`ลบบันทึกนี้ (${history[reverseIndex].date}) ใช่หรือไม่?`)) {
+                history.splice(reverseIndex, 1);
+                saveHistory(history);
+                renderHistory();
+                updateChart();
+            }
+        }
+
+        // ฟังก์ชันอัปเดตกราฟ
+        function updateChart() {
+            const history = loadHistory();
+            const ctx = document.getElementById('bmiChart').getContext('2d');
+
+            // เตรียมข้อมูลสำหรับกราฟ
+            const labels = history.map(item => item.date);
+            const bmiValues = history.map(item => parseFloat(item.bmi));
+
+            // ถ้ามีกราฟเดิมให้ลบทิ้ง
+            if (chart) {
+                chart.destroy();
+            }
+
+            // สร้างกราฟใหม่
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'BMI Value',
+                        data: bmiValues,
+                        borderColor: '#0D1B2A',
+                        backgroundColor: 'rgba(13, 27, 42, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#0D1B2A'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                font: { family: "'Sarabun', sans-serif" }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 10,
+                            max: 50,
+                            ticks: {
+                                font: { family: "'Sarabun', sans-serif" }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: { family: "'Sarabun', sans-serif" }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ฟังก์ชันล้างข้อมูลฟอร์ม
+        function clearData() {
+            document.getElementById('weightInput').value = '';
+            document.getElementById('heightInput').value = '';
+            document.getElementById('bmiResultText').innerText = '--.-';
+            document.getElementById('bmiStatusText').innerText = 'รอการคำนวณ';
+        }
+
+        // เมื่อหน้าเพจโหลด ให้แสดงประวัติและกราฟ
+        window.addEventListener('DOMContentLoaded', () => {
+            renderHistory();
+            updateChart();
+
+            // ให้กด Enter บนช่องกรอกได้
+            document.getElementById('weightInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') calculateBMI();
+            });
+            document.getElementById('heightInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') calculateBMI();
+            });
+        });
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js').catch(() => {
+                    // Service worker registration failed, app will still work online
+                });
+            });
+        }
+    </script>
+
+</body>
+</html>
